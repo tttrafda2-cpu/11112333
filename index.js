@@ -9,7 +9,7 @@ const express = require('express');
 const app = express();
 
 app.get('/', (req, res) => {
-  res.send('Bot is simulating a real player');
+  res.send('Bot is simulating a real player with 5-hour chat intervals');
 });
 
 app.listen(8000, () => {
@@ -32,7 +32,6 @@ function createBot() {
 
    let pendingPromise = Promise.resolve();
 
-   // دالة لتوليد رقم عشوائي بين قيمتين
    const getRandom = (min, max) => Math.floor(Math.random() * (max - min + 1) + min);
 
    function sendRegister(password) {
@@ -58,77 +57,70 @@ function createBot() {
    }
 
    bot.once('spawn', () => {
-      console.log('\x1b[33m[RealPlayerSim] Bot joined the server as a "real player"', '\x1b[0m');
+      console.log('\x1b[33m[RealPlayerSim] Bot joined. Chat interval: 5 hours.', '\x1b[0m');
 
       if (config.utils['auto-auth'].enabled) {
          const password = config.utils['auto-auth'].password;
          pendingPromise = pendingPromise
-            .then(() => new Promise(r => setTimeout(r, getRandom(2000, 5000)))) // تأخير بشري قبل التسجيل
+            .then(() => new Promise(r => setTimeout(r, getRandom(2000, 5000))))
             .then(() => sendRegister(password))
             .then(() => new Promise(r => setTimeout(r, getRandom(1000, 3000))))
             .then(() => sendLogin(password))
             .catch(error => console.error('[ERROR]', error));
       }
 
-      // --- منطق محاكاة اللاعب الحقيقي (Human-like Behavior) ---
-
-      // 1. الحركة العشوائية (تغيير الاتجاهات بشكل غير منتظم)
+      // 1. الحركة العشوائية
       const controls = ['forward', 'back', 'left', 'right'];
       function randomMovement() {
-         // إيقاف كل الحركات الحالية أولاً
          controls.forEach(c => bot.setControlState(c, false));
-         
-         // اختيار حركة عشوائية أو التوقف (Idle)
-         if (Math.random() > 0.2) { // 80% احتمال للحركة
+         if (Math.random() > 0.2) {
             const move = controls[getRandom(0, controls.length - 1)];
             bot.setControlState(move, true);
-            console.log(`[Sim] Moving: ${move}`);
-         } else {
-            console.log(`[Sim] Standing still (Idle)`);
          }
-
-         // تكرار العملية بعد وقت عشوائي (بين 3 إلى 7 ثوانٍ)
          setTimeout(randomMovement, getRandom(3000, 7000));
       }
       randomMovement();
 
-      // 2. القفز العشوائي (بين 4 إلى 10 ثوانٍ)
+      // 2. القفز العشوائي
       function randomJump() {
          bot.setControlState('jump', true);
          setTimeout(() => bot.setControlState('jump', false), 400);
-         
          setTimeout(randomJump, getRandom(4000, 10000));
       }
       randomJump();
 
-      // 3. الشفت العشوائي (بين 8 إلى 15 ثانية)
+      // 3. الشفت العشوائي
       function randomSneak() {
          bot.setControlState('sneak', true);
          setTimeout(() => bot.setControlState('sneak', false), getRandom(500, 2000));
-         
          setTimeout(randomSneak, getRandom(8000, 15000));
       }
       randomSneak();
 
-      // 4. الالتفات العشوائي (تحريك الرأس كأنه ينظر حوله)
+      // 4. الالتفات العشوائي
       function randomLook() {
-         const yaw = (Math.random() * Math.PI * 2); // التفات كامل
-         const pitch = (Math.random() - 0.5) * Math.PI; // نظر للأعلى والأسفل
+         const yaw = (Math.random() * Math.PI * 2); 
+         const pitch = (Math.random() - 0.5) * Math.PI; 
          bot.look(yaw, pitch, false);
-         
          setTimeout(randomLook, getRandom(2000, 5000));
       }
       randomLook();
 
-      // رسائل الشات بتوقيتات متباعدة
+      // --- تعديل الشات: رسالة واحدة كل 5 ساعات ---
       if (config.utils['chat-messages'].enabled) {
          const messages = config.utils['chat-messages']['messages'];
          let i = 0;
+         const FIVE_HOURS = 5 * 60 * 60 * 1000; // 18,000,000 مللي ثانية
+
          function sendRandomChat() {
-            bot.chat(messages[i]);
-            i = (i + 1) % messages.length;
-            setTimeout(sendRandomChat, getRandom(15000, 45000)); // رسالة كل 15-45 ثانية
+            if (messages.length > 0) {
+               bot.chat(messages[i]);
+               console.log(`[Chat] Sent message: ${messages[i]}. Next message in 5 hours.`);
+               i = (i + 1) % messages.length;
+            }
+            setTimeout(sendRandomChat, FIVE_HOURS);
          }
+         // إرسال أول رسالة بعد 10 ثوانٍ من الدخول، ثم كل 5 ساعات
          setTimeout(sendRandomChat, 10000);
       }
    });
@@ -139,7 +131,7 @@ function createBot() {
 
    if (config.utils['auto-reconnect']) {
       bot.on('end', () => {
-         setTimeout(() => createBot(), getRandom(5000, 10000)); // إعادة اتصال بتوقيت عشوائي
+         setTimeout(() => createBot(), getRandom(5000, 10000)); 
       });
    }
 
