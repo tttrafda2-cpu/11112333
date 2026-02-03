@@ -32,10 +32,12 @@
     "chat-messages": {
       "enabled": true,
       "repeat": true,
-      "repeat-delay": 10000,
+      "repeat-delay": 60,
 
       "messages": [
-        "Welcome To Veylex",
+        "I'm a regular player",
+        "Subscibe To Tyrox!",
+        "I Like to Play Minecraft!"
       ]
     },
 
