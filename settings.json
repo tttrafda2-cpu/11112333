@@ -1,46 +1,42 @@
 {
   "bot-account": {
-    "username": "AFKBot", 
+    "username": "AFKBot",
     "password": "",
     "type": "offline"
   },
-
   "server": {
-    "ip": "VLXCRAFT.aternos.me", 
-    "port": 34648,   
-    "version": "1.12.1"   
+    "ip": "VLXCRAFT.aternos.me",
+    "port": 34648,
+    "version": "1.12.1"
   },
-
   "position": {
     "enabled": false,
     "x": 0,
     "y": 0,
     "z": 0
   },
-
   "utils": {
     "auto-auth": {
       "enabled": false,
       "password": ""
     },
-
     "anti-afk": {
       "enabled": true,
       "sneak": true
     },
-
+    "fast-forward": {
+      "enabled": true
+    },
     "chat-messages": {
       "enabled": true,
       "repeat": true,
-      "repeat-delay": 60,
-
+      "repeat-delay": 10000,
       "messages": [
-        "I'm a regular player",
-        "Subscibe To Tyrox!",
-        "I Like to Play Minecraft!"
+        "اتمنى الاتزام بالقوانين",
+        "welcome",
+        "الرجاء متابعة الفعاليات"
       ]
     },
-
     "chat-log": true,
     "auto-reconnect": true,
     "auto-recconect-delay": 5000
