@@ -9,7 +9,7 @@ const express = require('express');
 const app = express();
 
 app.get('/', (req, res) => {
-  res.send('Bot has arrived');
+  res.send('Bot is simulating a real player');
 });
 
 app.listen(8000, () => {
@@ -29,147 +29,121 @@ function createBot() {
    bot.loadPlugin(pathfinder);
    const mcData = require('minecraft-data')(bot.version || config.server.version);
    const defaultMove = new Movements(bot, mcData);
-   // bot.settings.colorsEnabled = false; // Removed because it causes errors in newer mineflayer versions
 
    let pendingPromise = Promise.resolve();
 
+   // دالة لتوليد رقم عشوائي بين قيمتين
+   const getRandom = (min, max) => Math.floor(Math.random() * (max - min + 1) + min);
+
    function sendRegister(password) {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
          bot.chat(`/register ${password} ${password}`);
          console.log(`[Auth] Sent /register command.`);
-
          bot.once('chat', (username, message) => {
-            console.log(`[ChatLog] <${username}> ${message}`); // Log all chat messages
-
-            // Check for various possible responses
-            if (message.includes('successfully registered')) {
-               console.log('[INFO] Registration confirmed.');
-               resolve();
-            } else if (message.includes('already registered')) {
-               console.log('[INFO] Bot was already registered.');
-               resolve(); // Resolve if already registered
-            } else if (message.includes('Invalid command')) {
-               reject(`Registration failed: Invalid command. Message: "${message}"`);
-            } else {
-               reject(`Registration failed: unexpected message "${message}".`);
-            }
+            console.log(`[ChatLog] <${username}> ${message}`);
+            resolve();
          });
       });
    }
 
    function sendLogin(password) {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
          bot.chat(`/login ${password}`);
          console.log(`[Auth] Sent /login command.`);
-
          bot.once('chat', (username, message) => {
-            console.log(`[ChatLog] <${username}> ${message}`); // Log all chat messages
-
-            if (message.includes('successfully logged in')) {
-               console.log('[INFO] Login successful.');
-               resolve();
-            } else if (message.includes('Invalid password')) {
-               reject(`Login failed: Invalid password. Message: "${message}"`);
-            } else if (message.includes('not registered')) {
-               reject(`Login failed: Not registered. Message: "${message}"`);
-            } else {
-               reject(`Login failed: unexpected message "${message}".`);
-            }
+            console.log(`[ChatLog] <${username}> ${message}`);
+            resolve();
          });
       });
    }
 
    bot.once('spawn', () => {
-      console.log('\x1b[33m[AfkBot] Bot joined the server', '\x1b[0m');
+      console.log('\x1b[33m[RealPlayerSim] Bot joined the server as a "real player"', '\x1b[0m');
 
       if (config.utils['auto-auth'].enabled) {
-         console.log('[INFO] Started auto-auth module');
-
          const password = config.utils['auto-auth'].password;
-
          pendingPromise = pendingPromise
+            .then(() => new Promise(r => setTimeout(r, getRandom(2000, 5000)))) // تأخير بشري قبل التسجيل
             .then(() => sendRegister(password))
+            .then(() => new Promise(r => setTimeout(r, getRandom(1000, 3000))))
             .then(() => sendLogin(password))
             .catch(error => console.error('[ERROR]', error));
       }
 
-      if (config.utils['chat-messages'].enabled) {
-         console.log('[INFO] Started chat-messages module');
-         const messages = config.utils['chat-messages']['messages'];
+      // --- منطق محاكاة اللاعب الحقيقي (Human-like Behavior) ---
 
-         if (config.utils['chat-messages'].repeat) {
-            const delay = config.utils['chat-messages']['repeat-delay'];
-            let i = 0;
-
-            let msg_timer = setInterval(() => {
-               bot.chat(`${messages[i]}`);
-
-               if (i + 1 === messages.length) {
-                  i = 0;
-               } else {
-                  i++;
-               }
-            }, delay * 1000);
+      // 1. الحركة العشوائية (تغيير الاتجاهات بشكل غير منتظم)
+      const controls = ['forward', 'back', 'left', 'right'];
+      function randomMovement() {
+         // إيقاف كل الحركات الحالية أولاً
+         controls.forEach(c => bot.setControlState(c, false));
+         
+         // اختيار حركة عشوائية أو التوقف (Idle)
+         if (Math.random() > 0.2) { // 80% احتمال للحركة
+            const move = controls[getRandom(0, controls.length - 1)];
+            bot.setControlState(move, true);
+            console.log(`[Sim] Moving: ${move}`);
          } else {
-            messages.forEach((msg) => {
-               bot.chat(msg);
-            });
+            console.log(`[Sim] Standing still (Idle)`);
          }
+
+         // تكرار العملية بعد وقت عشوائي (بين 3 إلى 7 ثوانٍ)
+         setTimeout(randomMovement, getRandom(3000, 7000));
       }
+      randomMovement();
 
-      const pos = config.position;
-
-      if (config.position.enabled) {
-         console.log(
-            `\x1b[32m[Afk Bot] Starting to move to target location (${pos.x}, ${pos.y}, ${pos.z})\x1b[0m`
-         );
-         bot.pathfinder.setMovements(defaultMove);
-         bot.pathfinder.setGoal(new GoalBlock(pos.x, pos.y, pos.z));
-      }
-
-      if (config.utils['anti-afk'].enabled) {
+      // 2. القفز العشوائي (بين 4 إلى 10 ثوانٍ)
+      function randomJump() {
          bot.setControlState('jump', true);
-         if (config.utils['anti-afk'].sneak) {
-            bot.setControlState('sneak', true);
-         }
+         setTimeout(() => bot.setControlState('jump', false), 400);
+         
+         setTimeout(randomJump, getRandom(4000, 10000));
       }
-   });
+      randomJump();
 
-   bot.on('goal_reached', () => {
-      console.log(
-         `\x1b[32m[AfkBot] Bot arrived at the target location. ${bot.entity.position}\x1b[0m`
-      );
+      // 3. الشفت العشوائي (بين 8 إلى 15 ثانية)
+      function randomSneak() {
+         bot.setControlState('sneak', true);
+         setTimeout(() => bot.setControlState('sneak', false), getRandom(500, 2000));
+         
+         setTimeout(randomSneak, getRandom(8000, 15000));
+      }
+      randomSneak();
+
+      // 4. الالتفات العشوائي (تحريك الرأس كأنه ينظر حوله)
+      function randomLook() {
+         const yaw = (Math.random() * Math.PI * 2); // التفات كامل
+         const pitch = (Math.random() - 0.5) * Math.PI; // نظر للأعلى والأسفل
+         bot.look(yaw, pitch, false);
+         
+         setTimeout(randomLook, getRandom(2000, 5000));
+      }
+      randomLook();
+
+      // رسائل الشات بتوقيتات متباعدة
+      if (config.utils['chat-messages'].enabled) {
+         const messages = config.utils['chat-messages']['messages'];
+         let i = 0;
+         function sendRandomChat() {
+            bot.chat(messages[i]);
+            i = (i + 1) % messages.length;
+            setTimeout(sendRandomChat, getRandom(15000, 45000)); // رسالة كل 15-45 ثانية
+         }
+         setTimeout(sendRandomChat, 10000);
+      }
    });
 
    bot.on('death', () => {
-      console.log(
-         `\x1b[33m[AfkBot] Bot has died and was respawned at ${bot.entity.position}`,
-         '\x1b[0m'
-      );
+      console.log(`\x1b[33m[Sim] Bot died, waiting to respawn...\x1b[0m`);
    });
 
    if (config.utils['auto-reconnect']) {
       bot.on('end', () => {
-         setTimeout(() => {
-            createBot();
-         }, config.utils['auto-recconect-delay']);
+         setTimeout(() => createBot(), getRandom(5000, 10000)); // إعادة اتصال بتوقيت عشوائي
       });
    }
 
-   bot.on('kicked', (reason) =>
-      console.log(
-         '\x1b[33m',
-         `[AfkBot] Bot was kicked from the server. Reason: \n${reason}`,
-         '\x1b[0m'
-      )
-   );
-
-   bot.on('error', (err) => {
-      console.log(`\x1b[31m[ERROR] ${err.message}`, '\x1b[0m');
-      if (err.message.includes('version')) {
-         console.log('\x1b[33m[TIP] Try changing the version in settings.json to match your server exactly.\x1b[0m');
-      }
-   });
+   bot.on('error', (err) => console.log(`\x1b[31m[ERROR] ${err.message}`, '\x1b[0m'));
 }
 
 createBot();
